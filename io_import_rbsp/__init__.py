@@ -121,7 +121,7 @@ class ImportRBSP(Operator, ImportHelper):
 
         if self.load_collision != "None":
             collision_collection = make_collection(bsp_collection, "collision")
-            if self.load_collision in ("Tricoll","TricollStaticProps"):
+            if self.load_collision in ("Tricoll", "TricollStaticProps"):
                 if self.split_world_collision:
                     count = load.collision.split_tricoll_collision(
                         self.filepath, collision_collection)
