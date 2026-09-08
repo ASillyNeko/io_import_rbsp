@@ -60,9 +60,7 @@ triggers_navmesh = [
     "light_environment_volume",
     "trigger_hurt",
     "trigger_out_of_bounds",
-    "trigger_death_fall",
-    "trigger_quickdeath",
-    "trigger_quickdeath_checkpoint",
+    "trigger_death_fall"
     ]
 
 def all_triggers(bsp, ent_collections, is_navmesh):
