@@ -33,13 +33,15 @@ class ImportRBSP(Operator, ImportHelper):
         default="*.bsp", options={"HIDDEN"}, maxlen=255)  # noqa F722
     # importer settings
     load_geometry: BoolProperty(
-        name="Geometry", description="Load geometry", default=True)  # noqa F722
+        name="Geometry", description="Load geometry", default=False)  # noqa F722
     load_materials: BoolProperty(
-        name="Materials", description="Load materials", default=True)  # noqa F722
+        name="Materials", description="Load materials", default=False)  # noqa F722
     load_triggers: BoolProperty(
         name="Triggers", description="Load triggers", default=True)  # noqa F722
     load_entities: BoolProperty(
-        name="Entities", description="Load entities", default=True)  # noqa F722
+        name="Entities", description="Load entities", default=False)  # noqa F722
+    is_navmesh: BoolProperty(
+        name="Navmesh Map", description="Is map for Navmesh", default=True) # noqa F722
     # TODO: separate entities into more sub-categories
     # -- lights
     # -- sound
@@ -53,7 +55,7 @@ class ImportRBSP(Operator, ImportHelper):
              "Place empties at prop origins"),  # noqa F722
             ("Models", "Textured Models",  # noqa F722
              "Full props & materials; Very slow")),  # noqa F722
-        default="None")  # noqa F722
+        default="Models")  # noqa F722
 
     def execute(self, context):
         bsp = bsp_tool.load_bsp(self.filepath)
@@ -79,7 +81,7 @@ class ImportRBSP(Operator, ImportHelper):
         if self.load_triggers or self.load_entities:
             ent_collections = make_entity_collections(bsp_collection)
             if self.load_triggers:
-                load.triggers.all_triggers(bsp, ent_collections)
+                load.triggers.all_triggers(bsp, ent_collections, self.is_navmesh)
             if self.load_entities:
                 load.entities.all_entities(bsp, ent_collections)
 

@@ -53,10 +53,19 @@ trigger_colours = {
     "trigger_quickdeath": red,
     "trigger_quickdeath_checkpoint": red,
     "trigger_spawn": blue,
-    "trigger_teleporter": blue}
+    "trigger_teleporter": blue
+    }
 
+triggers_navmesh = [
+    "light_environment_volume",
+    "trigger_hurt",
+    "trigger_out_of_bounds",
+    "trigger_death_fall",
+    "trigger_quickdeath",
+    "trigger_quickdeath_checkpoint",
+    ]
 
-def all_triggers(bsp, ent_collections):
+def all_triggers(bsp, ent_collections, is_navmesh):
     entity_blocks = {
         "bsp": bsp.ENTITIES,
         "env": bsp.ENTITIES_env,
@@ -68,7 +77,7 @@ def all_triggers(bsp, ent_collections):
         entity_collection = ent_collections[block_name]
         for entity in entities:
             classname = editorclass_of(entity)
-            if classname not in trigger_colours:
+            if is_navmesh and classname not in triggers_navmesh or not is_navmesh and classname not in trigger_colours:
                 continue  # not a trigger, skip
             trigger_object = bpy.data.objects.new(
                 name_of(entity), trigger_brushes(entity))
