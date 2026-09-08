@@ -62,14 +62,16 @@ class ImportRBSP(Operator, ImportHelper):
             ("None", "No Collision",  # noqa F722
              "Do not import collision shapes"),  # noqa F722
             ("Tricoll", "BSP Tricoll",  # noqa F722
-             "Import BSP tricoll world collision only"),  # noqa F722
+             "Import BSP tricoll world collision"),  # noqa F722
             ("World", "BSP World",  # noqa F722
              "Import BSP brush and tricoll collision"),  # noqa F722
             ("StaticProps", "Static Prop Models",  # noqa F722
              "Import exact .mdl/.phy collision for solid static props"),  # noqa F722
+            ("TricollStaticProps", "Tricoll + Static Props",
+             "Import BSP tricoll world collision and solid static props"),
             ("All", "World + Static Props",  # noqa F722
-             "Import BSP world collision and exact static prop collision")),  # noqa F722
-        default="All")  # noqa F722
+             "Import BSP world collision and exact solid static props")),  # noqa F722
+        default="TricollStaticProps")  # noqa F722
     split_world_collision: BoolProperty(
         name="Split World Collision",  # noqa F722
         description="Create one labeled object per BSP brush and tricoll primitive; very slow on large maps",  # noqa F722
@@ -119,7 +121,7 @@ class ImportRBSP(Operator, ImportHelper):
 
         if self.load_collision != "None":
             collision_collection = make_collection(bsp_collection, "collision")
-            if self.load_collision == "Tricoll":
+            if self.load_collision in ("Tricoll","TricollStaticProps"):
                 if self.split_world_collision:
                     count = load.collision.split_tricoll_collision(
                         self.filepath, collision_collection)
@@ -134,7 +136,7 @@ class ImportRBSP(Operator, ImportHelper):
                     self.report({"INFO"}, f"Imported {count} world collision primitives")
                 else:
                     load.collision.world_collision(self.filepath, collision_collection)
-            if self.load_collision in ("StaticProps", "All"):
+            if self.load_collision in ("StaticProps", "TricollStaticProps", "All"):
                 load.collision.static_prop_collision(self.filepath, collision_collection)
 
         if self.load_toolsclip:
