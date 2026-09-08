@@ -1,5 +1,6 @@
-__all__ = ["entities", "geometry", "materials", "props", "triggers", "utils"]
+__all__ = ["collision", "entities", "geometry", "materials", "props", "triggers", "utils"]
 
+from . import collision
 from . import entities
 from . import geometry
 from . import materials

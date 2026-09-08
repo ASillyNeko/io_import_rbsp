@@ -20,13 +20,36 @@ from .materials import placeholder, search
 # auto-hide large collections (> 1000 props)
 
 
+def prop_label(prop_index: int, asset_path: str, origin) -> str:
+    x, y, z = origin
+    return (
+        f"prop_{prop_index:06d} | {asset_path} | "
+        f"{x:.2f} {y:.2f} {z:.2f}")
+
+
+def annotate_prop_object(obj, prop, prop_index: int, asset_path: str):
+    solid_type = getattr(prop, "solid_type", getattr(prop, "solid_mode", 0))
+    obj["rbsp_type"] = "static_prop"
+    obj["rbsp_prop_index"] = prop_index
+    obj["rbsp_model_index"] = prop.model_name
+    obj["rbsp_model_path"] = asset_path
+    obj["rbsp_origin"] = tuple(prop.origin)
+    obj["rbsp_angles"] = tuple(prop.angles)
+    obj["rbsp_scale"] = prop.scale
+    obj["rbsp_solid_type"] = int(solid_type) if isinstance(solid_type, int) else str(solid_type)
+    obj["rbsp_flags"] = getattr(prop, "flags", 0)
+    obj["rbsp_collision_flags_add"] = getattr(prop, "collision_flags_add", 0)
+    obj["rbsp_collision_flags_remove"] = getattr(prop, "collision_flags_remove", 0)
+    obj["asset_path"] = asset_path
+
+
 def as_empties(bsp, prop_collection: Collection):
     """Requires all models to be extracted beforehand"""
-    for prop in bsp.GAME_LUMP.sprp.props:
+    for prop_index, prop in enumerate(bsp.GAME_LUMP.sprp.props):
         path = bsp.GAME_LUMP.sprp.model_names[prop.model_name]
-        name = os.path.basename(path).lower()
+        name = prop_label(prop_index, path, prop.origin)
         empty = bpy.data.objects.new(name, None)
-        empty["asset_path"] = path
+        annotate_prop_object(empty, prop, prop_index, path)
         empty.empty_display_type = "SPHERE"
         empty.empty_display_size = 64
         empty.location = tuple(prop.origin)
@@ -43,23 +66,39 @@ def as_empties(bsp, prop_collection: Collection):
         prop_collection.objects.link(empty)
 
 
-def static_props(bsp, prop_collection: Collection):
+def static_props(bsp, prop_collection: Collection, bsp_path: str = None):
     vpk_folder = bpy.context.scene.rbsp_prefs.vpk_folder
     if not os.path.isdir(vpk_folder):
-        return
+        sibling_models = None
+        if bsp_path is not None:
+            sibling_models = os.path.abspath(os.path.join(
+                os.path.dirname(bsp_path), os.pardir, "models"))
+        if sibling_models is not None and os.path.isdir(sibling_models):
+            vpk_folder = sibling_models
+        else:
+            print(
+                "io_import_rbsp: VPK/model folder is not set; "
+                "importing static props as named empties instead")
+            as_empties(bsp, prop_collection)
+            return
     meshes = [
         load_model(model_path(vpk_folder, model_name))
         for model_name in bsp.GAME_LUMP.sprp.model_names]
+    found_models = sum(
+        model_path(vpk_folder, model_name) is not None
+        for model_name in bsp.GAME_LUMP.sprp.model_names)
+    parsed_models = sum(mesh is not None for mesh in meshes)
+    created_objects = 0
 
-    for prop in bsp.GAME_LUMP.sprp.props:
+    for prop_index, prop in enumerate(bsp.GAME_LUMP.sprp.props):
         mesh = meshes[prop.model_name]
         path = bsp.GAME_LUMP.sprp.model_names[prop.model_name]
-        name = os.path.basename(path).lower()
+        name = prop_label(prop_index, path, prop.origin)
         prop_object = bpy.data.objects.new(name, mesh)
+        annotate_prop_object(prop_object, prop, prop_index, path)
         if mesh is None:
             prop_object.empty_display_type = "SPHERE"
             prop_object.empty_display_size = 64
-            prop_object["asset_path"] = path
         prop_object.location = tuple(prop.origin)
         radians = list(map(math.radians, prop.angles))
         prop_object.rotation_euler = mathutils.Euler(
@@ -71,21 +110,39 @@ def static_props(bsp, prop_collection: Collection):
         rgb = [(255 + exponent * (c - 255)) / 255 for c in (r, g, b)]
         prop_object.color = (*rgb, 1.0)
         prop_collection.objects.link(prop_object)
+        created_objects += 1
+
+    print(
+        "io_import_rbsp: static props imported: "
+        f"{created_objects} objects, {found_models}/{len(meshes)} model files found, "
+        f"{parsed_models}/{len(meshes)} model meshes parsed")
 
 
 def model_path(vpk_folder: str, asset_path: str) -> str:
-    filepath = os.path.join(vpk_folder, asset_path)
-    if os.path.exists(filepath):
-        return filepath  # case-senstive match
-    else:  # try for case-insensitive match
-        return search(vpk_folder, asset_path)
+    asset_path = asset_path.replace("\\", "/")
+    candidates = [asset_path]
+    if asset_path.lower().startswith("models/"):
+        candidates.append(asset_path[7:])
+    else:
+        candidates.append(f"models/{asset_path}")
+
+    for candidate in candidates:
+        filepath = os.path.join(vpk_folder, candidate)
+        if os.path.exists(filepath):
+            return filepath  # case-sensitive match
+
+    for candidate in candidates:
+        filepath = search(vpk_folder, candidate)
+        if filepath is not None:
+            return filepath
+    return None
 
 
 def load_model(filepath: str) -> Mesh:
     if filepath is None:
         return  # search() FileNotFound
-    mdl = Mdl.from_file(filepath)
     try:
+        mdl = Mdl.from_file(filepath)
         mdl.parse()
     except Exception:
         return None  # failed to parse
