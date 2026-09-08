@@ -71,7 +71,7 @@ class ImportRBSP(Operator, ImportHelper):
              "Import BSP tricoll world collision and solid static props"),
             ("All", "World + Static Props",  # noqa F722
              "Import BSP world collision and exact solid static props")),  # noqa F722
-        default="TricollStaticProps")  # noqa F722
+        default="StaticProps")  # noqa F722
     split_world_collision: BoolProperty(
         name="Split World Collision",  # noqa F722
         description="Create one labeled object per BSP brush and tricoll primitive; very slow on large maps",  # noqa F722
