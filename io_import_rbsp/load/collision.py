@@ -225,8 +225,9 @@ def annotate_brush_object(obj, index, contents, brush, kind):
 
 
 def has_contents_that_block(contents, titan):
-    if contents & (CONTENTS_SOLID | CONTENTS_WINDOW | CONTENTS_GRATE):
-        return True
+    # not a good fix for angel city's useless brush
+    if contents & CONTENTS_PHYSICSCLIP:
+        return False
 
     if titan:
         return contents & CONTENTS_TITANCLIP
