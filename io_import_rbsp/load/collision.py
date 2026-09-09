@@ -35,18 +35,54 @@ TOOLSCLIP_CONTENTS = {
     0x00310000,
 }
 
+# taken from mrvn-radiant
+CONTENTS_SOLID = 0x00000001
+CONTENTS_WINDOW = 0x00000002
+CONTENTS_AUX = 0x00000004
+CONTENTS_GRATE = 0x00000008
+CONTENTS_SLIME = 0x00000010
+CONTENTS_WATER = 0x00000020
+CONTENTS_WINDOW_NOCOLLIDE = 0x00000040
+CONTENTS_OPAQUE = 0x00000080
+CONTENTS_TESTFOGVOLUME = 0x00000100
+CONTENTS_PHYSICSCLIP = 0x00000200
+CONTENTS_BLOCKLIGHT = 0x00000400
+CONTENTS_NOGRAPPLE = 0x00000800
+CONTENTS_UNUSED_03 = 0x00001000
+CONTENTS_IGNORE_NODRAW_OPAQUE = 0x00002000
+CONTENTS_MOVEABLE = 0x00004000
+CONTENTS_TEST_SOLID_BODY_SHOT = 0x00008000
+CONTENTS_PLAYERCLIP = 0x00010000
+CONTENTS_MONSTERCLIP = 0x00020000
+CONTENTS_OPERATOR_FLOOR = 0x00040000
+CONTENTS_BLOCKLOS = 0x00080000
+CONTENTS_NOCLIMB = 0x00100000
+CONTENTS_TITANCLIP = 0x00200000
+CONTENTS_BULLETCLIP = 0x00400000
+CONTENTS_OPERATORCLIP = 0x00800000
+CONTENTS_MONSTER = 0x02000000
+CONTENTS_DEBRIS = 0x04000000
+CONTENTS_DETAIL = 0x08000000
+CONTENTS_TRANSLUCENT = 0x10000000
+CONTENTS_HITBOX = 0x40000000
+
 MDL_COLLISION_OFFSET = 460
 MDL_STATIC_COLLISION_COUNT = 464
 MDL_VTX_OFFSET = 428
 INCHES_PER_METER = 39.37007874
 
 
-def world_collision(bsp_path: str, collection: Collection):
+def world_collision(bsp_path: str, collection: Collection, navmesh, titan):
     bsp = RawBsp(bsp_path)
     vertices = []
     faces = []
 
     for primitive in bsp.world_primitives():
+        contents = bsp.contents_value(primitive.contents_index)
+
+        if navmesh and not has_contents_that_block(contents, titan):
+            continue
+
         mesh = bsp.tricoll_mesh(primitive.index) if primitive.type == TYPE_TRICOLL else bsp.brush_mesh(primitive.index)
         append_mesh(vertices, faces, mesh)
 
@@ -54,7 +90,7 @@ def world_collision(bsp_path: str, collection: Collection):
         make_object("bsp_world_collision", vertices, faces, collection)
 
 
-def tricoll_collision(bsp_path: str, collection: Collection):
+def tricoll_collision(bsp_path: str, collection: Collection, navmesh, titan):
     bsp = RawBsp(bsp_path)
     vertices = []
     faces = []
@@ -62,6 +98,12 @@ def tricoll_collision(bsp_path: str, collection: Collection):
     for primitive in bsp.world_primitives():
         if primitive.type != TYPE_TRICOLL:
             continue
+
+        contents = bsp.contents_value(primitive.contents_index)
+
+        if navmesh and not has_contents_that_block(contents, titan):
+            continue
+
         append_mesh(vertices, faces, bsp.tricoll_mesh(primitive.index))
 
     if faces:
@@ -69,7 +111,7 @@ def tricoll_collision(bsp_path: str, collection: Collection):
         obj["rbsp_type"] = "world_tricoll_merged"
 
 
-def split_world_collision(bsp_path: str, collection: Collection) -> int:
+def split_world_collision(bsp_path: str, collection: Collection, navmesh, titan) -> int:
     """Import each world brush and tricoll primitive as a named wireframe."""
     bsp = RawBsp(bsp_path)
     brush_collection = child_collection(collection, "world brushes")
@@ -85,6 +127,10 @@ def split_world_collision(bsp_path: str, collection: Collection) -> int:
             continue
 
         contents = bsp.contents_value(primitive.contents_index)
+
+        if navmesh and not has_contents_that_block(contents, titan):
+            continue
+
         if primitive.type == TYPE_BRUSH:
             name = f"world_brush_{primitive.index:05d}_0x{contents:08X}"
             obj = make_object(name, vertices, faces, brush_collection)
@@ -102,7 +148,7 @@ def split_world_collision(bsp_path: str, collection: Collection) -> int:
     return count
 
 
-def split_tricoll_collision(bsp_path: str, collection: Collection) -> int:
+def split_tricoll_collision(bsp_path: str, collection: Collection, navmesh, titan) -> int:
     """Import each world tricoll primitive as a named wireframe."""
     bsp = RawBsp(bsp_path)
     tricoll_collection = child_collection(collection, "world tricoll")
@@ -117,6 +163,10 @@ def split_tricoll_collision(bsp_path: str, collection: Collection) -> int:
             continue
 
         contents = bsp.contents_value(primitive.contents_index)
+
+        if navmesh and not has_contents_that_block(contents, titan):
+            continue
+
         name = f"world_tricoll_{primitive.index:05d}_0x{contents:08X}"
         obj = make_object(name, vertices, faces, tricoll_collection)
         obj["rbsp_type"] = "world_tricoll"
@@ -173,6 +223,16 @@ def annotate_brush_object(obj, index, contents, brush, kind):
         for axis in range(3))
     obj["rbsp_plane_count"] = brush["num_plane_offsets"]
 
+
+def has_contents_that_block(contents, titan):
+    if contents & (CONTENTS_SOLID | CONTENTS_WINDOW | CONTENTS_GRATE):
+        return True
+
+    if titan:
+        return contents & CONTENTS_TITANCLIP
+
+    # npcs can still move in player clips
+    return contents & CONTENTS_PLAYERCLIP
 
 def static_prop_collision(bsp_path: str, collection: Collection):
     vpk_folder = bpy.context.scene.rbsp_prefs.vpk_folder

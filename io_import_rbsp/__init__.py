@@ -42,6 +42,8 @@ class ImportRBSP(Operator, ImportHelper):
         name="Entities", description="Load entities", default=False)  # noqa F722
     is_navmesh: BoolProperty(
         name="Navmesh Map", description="Is map for Navmesh", default=True) # noqa F722
+    is_titan_navmesh: BoolProperty(
+        name="Titan Navmesh Map", description="Is map for Titan Navmesh", default=False) # noqa F722
     # TODO: separate entities into more sub-categories
     # -- lights
     # -- sound
@@ -69,9 +71,9 @@ class ImportRBSP(Operator, ImportHelper):
              "Import exact .mdl/.phy collision for solid static props"),  # noqa F722
             ("TricollStaticProps", "Tricoll + Static Props",  # noqa F722
              "Import BSP tricoll world collision and solid static props"),  # noqa F722
-            ("All", "World + Static Props",  # noqa F722
+            ("WorldStaticProps", "World + Static Props",  # noqa F722
              "Import BSP world collision and exact solid static props")),  # noqa F722
-        default="StaticProps")  # noqa F722
+        default="WorldStaticProps")  # noqa F722
     split_world_collision: BoolProperty(
         name="Split World Collision",  # noqa F722
         description="Create one labeled object per BSP brush and tricoll primitive; very slow on large maps",  # noqa F722
@@ -124,18 +126,18 @@ class ImportRBSP(Operator, ImportHelper):
             if self.load_collision in ("Tricoll", "TricollStaticProps"):
                 if self.split_world_collision:
                     count = load.collision.split_tricoll_collision(
-                        self.filepath, collision_collection)
+                        self.filepath, collision_collection, self.is_navmesh, self.is_titan_navmesh)
                     self.report({"INFO"}, f"Imported {count} tricoll primitives")
                 else:
                     tricoll_collection = make_collection(collision_collection, "world tricoll")
-                    load.collision.tricoll_collision(self.filepath, tricoll_collection)
+                    load.collision.tricoll_collision(self.filepath, tricoll_collection, self.is_navmesh, self.is_titan_navmesh)
             if self.load_collision in ("World", "All"):
                 if self.split_world_collision:
                     count = load.collision.split_world_collision(
-                        self.filepath, collision_collection)
+                        self.filepath, collision_collection, self.is_navmesh, self.is_titan_navmesh)
                     self.report({"INFO"}, f"Imported {count} world collision primitives")
                 else:
-                    load.collision.world_collision(self.filepath, collision_collection)
+                    load.collision.world_collision(self.filepath, collision_collection, self.is_navmesh, self.is_titan_navmesh)
             if self.load_collision in ("StaticProps", "TricollStaticProps", "All"):
                 load.collision.static_prop_collision(self.filepath, collision_collection)
 
