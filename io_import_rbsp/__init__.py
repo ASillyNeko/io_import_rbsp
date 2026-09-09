@@ -131,14 +131,14 @@ class ImportRBSP(Operator, ImportHelper):
                 else:
                     tricoll_collection = make_collection(collision_collection, "world tricoll")
                     load.collision.tricoll_collision(self.filepath, tricoll_collection, self.is_navmesh, self.is_titan_navmesh)
-            if self.load_collision in ("World", "All"):
+            if self.load_collision in ("World", "WorldStaticProps"):
                 if self.split_world_collision:
                     count = load.collision.split_world_collision(
                         self.filepath, collision_collection, self.is_navmesh, self.is_titan_navmesh)
                     self.report({"INFO"}, f"Imported {count} world collision primitives")
                 else:
                     load.collision.world_collision(self.filepath, collision_collection, self.is_navmesh, self.is_titan_navmesh)
-            if self.load_collision in ("StaticProps", "TricollStaticProps", "All"):
+            if self.load_collision in ("StaticProps", "TricollStaticProps", "WorldStaticProps"):
                 load.collision.static_prop_collision(self.filepath, collision_collection)
 
         if self.load_toolsclip:
