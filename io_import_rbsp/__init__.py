@@ -67,8 +67,8 @@ class ImportRBSP(Operator, ImportHelper):
              "Import BSP brush and tricoll collision"),  # noqa F722
             ("StaticProps", "Static Prop Models",  # noqa F722
              "Import exact .mdl/.phy collision for solid static props"),  # noqa F722
-            ("TricollStaticProps", "Tricoll + Static Props",
-             "Import BSP tricoll world collision and solid static props"),
+            ("TricollStaticProps", "Tricoll + Static Props",  # noqa F722
+             "Import BSP tricoll world collision and solid static props"),  # noqa F722
             ("All", "World + Static Props",  # noqa F722
              "Import BSP world collision and exact solid static props")),  # noqa F722
         default="StaticProps")  # noqa F722
